@@ -1,0 +1,110 @@
+[ first.yml ]
+
+name: Our First Workflow
+on: push
+jobs:
+  echo:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Hello, GitHub Actions!'
+
+
+  pwd-ls:
+    name: PWD & LS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print working directory
+        run: pwd
+      - name: List files
+        run: ls -al
+
+-------------------------------------------------
+
+[ checkout.yml ]
+
+name: Our Workflow
+on: push
+jobs:
+  checkout:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ls -al
+
+
+
+      - uses: actions/checkout@v3
+      - run: ls -al
+      - run: cat .github/workflows/checkout.yml
+
+
+--------------------------------------------------
+[ docker-image.yml ]
+
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'adopt'
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    - name: Build with Gradle
+      run: ./gradlew build
+    - name: Docker build
+      run: |
+        docker login -u ${{ secrets.USERNAME }} -p ${{ secrets.PASSWORD }}
+        docker build -t spring-cicd .
+        docker tag spring-cicd unico67/cicdtest:${GITHUB_SHA::7}
+        docker push unico67/cicdtest:${GITHUB_SHA::7}
+
+------------------
+[ docker-compose-cicd.yml ]
+
+version: "1"
+services:
+  mysqledu3:
+    image: mysql:8
+    networks:
+      - edu3net
+    volumes:
+      - myvolume:/var/lib/mysql
+    restart: always
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: rootroot
+      MYSQL_DATABASE: edudb
+      MYSQL_USER: jdbctest
+      MYSQL_PASSWORD: jdbctest
+    ports:
+      - 3306:3306
+
+  springedu3:
+    depends_on:
+      - mysqledu3
+    image: unico67/cicdtest:909e417  # 본인것으로 변경
+    networks:
+      - edu3net
+    ports:
+      - 9000:8088
+    restart: on-failure
+  
+
+networks:
+  edu3net:
+volumes:
+  myvolume:
